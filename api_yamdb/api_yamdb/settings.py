@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     'reviews.apps.ReviewsConfig',
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
+    'rest_framework',
+    'djoser',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +58,12 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'api_yamdb.wsgi.application'
+
+REST_FRAMEWORK = {
+
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
+}
 
 
 # Database
