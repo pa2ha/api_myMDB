@@ -1,9 +1,11 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets
+from rest_framework import filters, permissions, viewsets
 
-from .serializers import TitlesSerializer, GenreSerializer, CategorySerializer, ReviewSerializer
-from reviews.models import Titles, Genre, Category, Review
 from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
+from .serializers import (TitlesSerializer, GenreSerializer,
+                          CategorySerializer, UserSerializer, ReviewSerializer)
+from reviews.models import Titles, Genre, Category, Review
+from users.models import User
 
 
 class GenreViewSet(viewsets.ModelViewSet):
@@ -46,3 +48,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
             author=self.request.user,
             title=self.get_title()
         )
+
+        
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    filter_backends = (filters.SearchFilter)
+    search_fields = ('username',)
