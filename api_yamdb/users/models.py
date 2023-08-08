@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q
 from enum import Enum
 
 
@@ -41,4 +42,10 @@ class User(AbstractUser):
         default=RoleChoice.USER
     )
 
-
+    class Meta:
+        constraints = (
+            models.CheckConstraint(
+                check=~Q(username__iexact='me'),
+                name='username_not_me'
+            ),
+        )
