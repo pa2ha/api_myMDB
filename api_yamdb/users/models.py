@@ -1,13 +1,12 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import Q
-from enum import Enum
 
-
-class RoleChoice(Enum):
-    USER = 'user'
-    MODERATOR = 'moderator'
-    ADMIN = 'admin'
+CHOICES = (
+        ('user', 'user'),
+        ('moderator', 'moderator'),
+        ('admin', 'admin'),
+    )
 
 
 class User(AbstractUser):
@@ -29,6 +28,7 @@ class User(AbstractUser):
     last_name = models.CharField(
         verbose_name='Фамилия',
         max_length=150,
+        null=True
     )
     bio = models.TextField(
         verbose_name='Биография',
@@ -38,8 +38,8 @@ class User(AbstractUser):
     role = models.CharField(
         verbose_name='Роль',
         max_length=20,
-        choices=[(role, role.value) for role in RoleChoice],
-        default=RoleChoice.USER
+        choices=CHOICES,
+        default='user'
     )
 
     class Meta:
@@ -49,3 +49,6 @@ class User(AbstractUser):
                 name='username_not_me'
             ),
         )
+
+    def __str__(self):
+        return self.username
