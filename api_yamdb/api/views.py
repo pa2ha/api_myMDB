@@ -47,7 +47,7 @@ class TitlesViewSet(viewsets.ModelViewSet):
             raise ValidationError("Указаны несуществующие жанры")
 
     def get_serializer_class(self):
-        if self.action in SAFE_METHODS:
+        if self.request.method == 'GET':
             return ReadTitleSerializer
         return TitlesSerializer
 
