@@ -7,8 +7,9 @@ from rest_framework.decorators import action
 from django.db.models import Avg
 
 from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
-from .serializers import (TitlesSerializer, ReadTitleSerializer, GenreSerializer,
-                          CategorySerializer, UserSerializer, ReviewSerializer)
+from .serializers import (TitlesSerializer, ReadTitleSerializer,
+                          GenreSerializer, CategorySerializer,
+                          UserSerializer, ReviewSerializer)
 from reviews.models import Titles, Genre, Category, Review
 from users.models import User
 
@@ -81,11 +82,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    filter_backends = (filters.SearchFilter)
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
     lookup_field = 'username'
 
-    @action(methods=['get', 'patch',],
+    @action(methods=['get', 'patch', ],
             detail=False,
             url_path='me',
             serializer_class=UserSerializer)
@@ -98,5 +99,7 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(user, data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
