@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'rest_framework',
-    'djoser',
 ]
 
 MIDDLEWARE = [

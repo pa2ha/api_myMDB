@@ -29,6 +29,7 @@ class User(AbstractUser):
     last_name = models.CharField(
         verbose_name='Фамилия',
         max_length=150,
+        null=True
     )
     bio = models.TextField(
         verbose_name='Биография',
@@ -49,3 +50,6 @@ class User(AbstractUser):
                 name='username_not_me'
             ),
         )
+
+    def __str__(self):
+        return self.username

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from reviews.models import Titles, Category, Genre, Review
+from users.models import User
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -65,3 +66,13 @@ class ReviewSerializer(serializers.ModelSerializer):
                 'Вы уже оставляли отзыв на это произведение'
             )
         return data
+
+
+class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        fields = ("username", "email", "first_name",
+                  "last_name", "bio", "role")
+        model = User

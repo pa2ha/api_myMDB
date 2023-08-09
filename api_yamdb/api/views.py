@@ -1,7 +1,9 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, viewsets, mixins
+from rest_framework import filters, permissions, viewsets, mixins, status
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.decorators import action
 from django.db.models import Avg
 
 from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
@@ -81,3 +83,20 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     filter_backends = (filters.SearchFilter)
     search_fields = ('username',)
+    lookup_field = 'username'
+
+    @action(methods=['get', 'patch',],
+            detail=False,
+            url_path='me',
+            serializer_class=UserSerializer)
+    def user_profile(self, request):
+        user = request.user
+        if request.method == "GET":
+            serializer = self.get_serializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.method == "PATCH":
+            serializer = self.get_serializer(user, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
