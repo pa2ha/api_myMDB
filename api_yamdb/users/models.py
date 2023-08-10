@@ -3,9 +3,9 @@ from django.db import models
 from django.db.models import Q
 
 CHOICES = (
-        ('user', 'user'),
-        ('moderator', 'moderator'),
-        ('admin', 'admin'),
+    ('user', 'user'),
+    ('moderator', 'moderator'),
+    ('admin', 'admin'),
     )
 
 
@@ -18,17 +18,19 @@ class User(AbstractUser):
     email = models.EmailField(
         verbose_name='Электронная почта',
         max_length=254,
-        unique=True,
+        unique=True
     )
     first_name = models.CharField(
         verbose_name='Имя',
         max_length=150,
-        null=True
+        null=True,
+        blank=True
     )
     last_name = models.CharField(
         verbose_name='Фамилия',
         max_length=150,
-        null=True
+        null=True,
+        blank=True
     )
     bio = models.TextField(
         verbose_name='Биография',
@@ -39,6 +41,7 @@ class User(AbstractUser):
         verbose_name='Роль',
         max_length=20,
         choices=CHOICES,
+        blank=True,
         default='user'
     )
 
