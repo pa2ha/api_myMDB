@@ -6,7 +6,7 @@ CHOICES = (
     ('user', 'user'),
     ('moderator', 'moderator'),
     ('admin', 'admin'),
-    )
+)
 
 
 class User(AbstractUser):
@@ -47,6 +47,7 @@ class User(AbstractUser):
     )
 
     class Meta:
+        ordering = ('username',)
         constraints = (
             models.CheckConstraint(
                 check=~Q(username__iexact='me'),

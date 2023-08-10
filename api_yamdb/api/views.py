@@ -4,9 +4,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Avg
 
-from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
+from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor)
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
                           UserSerializer, UserRegisterSerializer,
@@ -84,14 +85,24 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = (IsAdmin,)
+    http_method_names = ['get', 'post', 'patch', 'del']
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
     lookup_field = 'username'
 
+    def create(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @action(methods=['get', 'patch', ],
             detail=False,
             url_path='me',
-            serializer_class=UserSerializer)
+            serializer_class=UserSerializer,
+            permission_classes=(permissions.IsAuthenticated,))
     def user_profile(self, request):
         user = request.user
         if request.method == "GET":
@@ -116,12 +127,25 @@ class UserRegister(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GetToken(APIView):
-    def post(self, request):
+class GetTokenViewSet(viewsets.ViewSet):
+    def create(self, request):
         serializer = GetTokenSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            username = serializer.validated_data['username']
+            confirmation_code = serializer.validated_data['confirmation_code']
+            user = User.objects.get(username=username)
+            if user.confirmation_code == confirmation_code:
+                refresh = RefreshToken.for_user(user)
+                token = {
+                    'token': str(refresh.access_token),
+                }
+                return Response(token, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Invalid confirmation code'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
