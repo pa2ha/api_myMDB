@@ -3,12 +3,15 @@ from rest_framework import filters, permissions, viewsets, mixins, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from django.db.models import Avg
 
 from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
-                          UserSerializer, ReviewSerializer, CommentSerializer)
+                          UserSerializer, UserRegisterSerializer,
+                          ReviewSerializer, CommentSerializer,
+                          GetTokenSerializer)
 from reviews.models import Titles, Genre, Category, Review
 from users.models import User
 
@@ -102,6 +105,23 @@ class UserViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_200_OK)
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
+        
+
+class UserRegister(APIView):
+    def post(self, request):
+        serializer = UserRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED) 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetToken(APIView):
+    def post(self, request):
+        serializer = GetTokenSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
