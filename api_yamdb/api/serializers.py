@@ -71,7 +71,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     email = serializers.EmailField(required=True)
-    role = serializers.ChoiceField(choices=CHOICES)
+    role = serializers.ChoiceField(choices=CHOICES, required=False)
 
     class Meta:
         fields = ("username", "email", "first_name",
