@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from reviews.models import Titles, Category, Genre, Review
+from reviews.models import Titles, Category, Comment, Genre, Review
 from users.models import User, CHOICES
 
 
@@ -77,3 +77,16 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ("username", "email", "first_name",
                   "last_name", "bio", "role")
         model = User
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """Сериализатор объектов класса Comment."""
+
+    author = serializers.StringRelatedField(
+        read_only=True
+    )
+
+    class Meta:
+        model = Comment
+        fields = (
+            'id', 'text', 'author', 'pub_date')
