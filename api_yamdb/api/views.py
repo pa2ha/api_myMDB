@@ -8,9 +8,8 @@ from django.db.models import Avg
 from .permissions import IsSuperUserIsAdminIsModeratorIsAuthor
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
-                          UserSerializer,
-                          ReviewSerializer)
-from reviews.models import Titles, Genre, Category
+                          UserSerializer, ReviewSerializer, CommentSerializer)
+from reviews.models import Titles, Genre, Category, Review
 from users.models import User
 
 
@@ -103,3 +102,30 @@ class UserViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_200_OK)
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    """Вьюсет для обьектов модели Comment."""
+
+    serializer_class = CommentSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsSuperUserIsAdminIsModeratorIsAuthor
+    )
+
+    def get_review(self):
+        """Возвращает объект текущего отзыва."""
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, pk=review_id)
+
+    def get_queryset(self):
+        """Возвращает queryset c комментариями для текущего отзыва."""
+        return self.get_review().comments.all()
+
+    def perform_create(self, serializer):
+        """Создает комментарий для текущего отзыва,
+        где автором является текущий пользователь."""
+        serializer.save(
+            author=self.request.user,
+            review=self.get_review()
+        )
