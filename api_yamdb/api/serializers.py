@@ -74,9 +74,27 @@ class UserSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=CHOICES, required=False)
 
     class Meta:
-        fields = ("username", "email", "first_name",
-                  "last_name", "bio", "role")
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
         model = User
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        fields = ('username', 'email')
+        model = User
+
+
+class GetTokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'confirmation_code')
 
 
 class CommentSerializer(serializers.ModelSerializer):

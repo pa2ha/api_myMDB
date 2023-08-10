@@ -42,6 +42,7 @@ class User(AbstractUser):
         max_length=20,
         choices=CHOICES,
         blank=True,
+
         default='user'
     )
 
