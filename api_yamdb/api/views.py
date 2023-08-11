@@ -6,8 +6,10 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Avg
+from rest_framework.permissions import AllowAny
 
-from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor)
+from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
+                          IsSuperUserOrIsAdminOnly)
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
                           UserSerializer, UserRegisterSerializer,
@@ -24,7 +26,14 @@ class GenreViewSet(mixins.CreateModelMixin,
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     filter_backends = (filters.SearchFilter,)
+    permission_classes = (IsSuperUserOrIsAdminOnly,)
     search_fields = ('name',)
+    lookup_field = 'slug'
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return super().get_permissions()
 
 
 class CategoryViewSet(mixins.CreateModelMixin,
@@ -34,12 +43,22 @@ class CategoryViewSet(mixins.CreateModelMixin,
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     filter_backends = (filters.SearchFilter,)
+    permission_classes = (IsSuperUserOrIsAdminOnly,)
     search_fields = ('name',)
+    lookup_field = 'slug'
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]  # Применить только для GET
+        return super().get_permissions()
 
 
 class TitlesViewSet(viewsets.ModelViewSet):
     queryset = Titles.objects.annotate(rating=Avg('reviews__score')).all()
     serializer_class = TitlesSerializer
+    permission_classes = (
+        IsSuperUserIsAdminIsModeratorIsAuthor,
+    )
 
     def perform_create(self, serializer):
         genre_names = self.request.data.get('genre', [])
@@ -60,8 +79,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     serializer_class = ReviewSerializer
     permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsSuperUserIsAdminIsModeratorIsAuthor
+        IsSuperUserIsAdminIsModeratorIsAuthor,
     )
 
     def get_title(self):
@@ -116,14 +134,14 @@ class UserViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_200_OK)
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
-        
+
 
 class UserRegister(APIView):
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED) 
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

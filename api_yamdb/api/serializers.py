@@ -10,11 +10,25 @@ class GenreSerializer(serializers.ModelSerializer):
         model = Genre
         fields = ('name', 'slug')
 
+    def validate_slug(self, value):
+        if Genre.objects.filter(slug=value).exists():
+            raise serializers.ValidationError(
+                "Жанр с таким слагом уже существует"
+            )
+        return value
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('name', 'slug')
+
+    def validate_slug(self, value):
+        if Category.objects.filter(slug=value).exists():
+            raise serializers.ValidationError(
+                "Категория с таким слагом уже существует"
+            )
+        return value
 
 
 class TitlesSerializer(serializers.ModelSerializer):
@@ -31,7 +45,7 @@ class TitlesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Titles
-        fields = '__all__'
+        fields = ('name', 'year', 'genre', 'category', 'description')
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
