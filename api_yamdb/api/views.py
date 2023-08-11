@@ -1,3 +1,5 @@
+import random
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, viewsets, mixins, status
 from rest_framework.exceptions import ValidationError
@@ -138,15 +140,28 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserRegister(APIView):
+    permission_classes = (permissions.AllowAny,)
+
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            user = User.objects.get(username=serializer.validated_data['username'])
+            confirmation_code = random.randint(111111, 999999)
+            user.confirmation_code = confirmation_code
+            user.save(update_fields=['confirmation_code'])
+            send_mail(
+                subject="YaMDb - confirmation code",
+                message=f"Your confirmation code: {confirmation_code}",
+                from_email=None,
+                recipient_list=[user.email],)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetTokenViewSet(viewsets.ViewSet):
+    permission_classes = (permissions.AllowAny,)
+
     def create(self, request):
         serializer = GetTokenSerializer(data=request.data)
         if serializer.is_valid():
