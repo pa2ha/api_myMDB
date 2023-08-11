@@ -42,8 +42,11 @@ class User(AbstractUser):
         max_length=20,
         choices=CHOICES,
         blank=True,
-
         default='user'
+    )
+    confirmation_code = models.IntegerField(
+        null=True,
+        blank=True
     )
 
     class Meta:
