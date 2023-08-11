@@ -54,7 +54,8 @@ class CategoryViewSet(mixins.CreateModelMixin,
 
 
 class TitlesViewSet(viewsets.ModelViewSet):
-    queryset = Titles.objects.annotate(rating=Avg('reviews__score')).all()
+    queryset = Titles.objects.annotate(
+        rating=Avg('reviews__score')).all().order_by('name')
     serializer_class = TitlesSerializer
     permission_classes = (
         IsSuperUserIsAdminIsModeratorIsAuthor,

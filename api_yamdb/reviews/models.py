@@ -11,6 +11,9 @@ class Genre(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ('name',)
 
 
 class Category(models.Model):
@@ -19,6 +22,9 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ('name',)
 
 
 class Titles(models.Model):
@@ -33,6 +39,9 @@ class Titles(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ('name',)
 
 
 class Review(models.Model):
