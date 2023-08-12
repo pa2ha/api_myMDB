@@ -7,11 +7,14 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.db.models import Avg
 from rest_framework.permissions import AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .filters import TitleFilter
+
 
 from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
-                          IsSuperUserOrIsAdminOnly)
+                          IsSuperUserOrIsAdminOnly, AnonimReadOnly)
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
                           UserSerializer, UserRegisterSerializer,
@@ -51,23 +54,28 @@ class CategoryViewSet(mixins.CreateModelMixin,
 
     def get_permissions(self):
         if self.request.method == 'GET':
-            return [AllowAny()]  # Применить только для GET
+            return [AllowAny()]
         return super().get_permissions()
 
 
 class TitlesViewSet(viewsets.ModelViewSet):
-    queryset = Titles.objects.annotate(
-        rating=Avg('reviews__score')).all().order_by('name')
+    queryset = Titles.objects.all()
     serializer_class = TitlesSerializer
-    permission_classes = (
-        IsSuperUserIsAdminIsModeratorIsAuthor,
-    )
+    permission_classes = (AnonimReadOnly | IsSuperUserOrIsAdminOnly,)
+    response_serializer_class = ReadTitleSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
 
     def perform_create(self, serializer):
-        genre_names = self.request.data.get('genre', [])
-        existing_genres = Genre.objects.filter(name__in=genre_names)
+        genre_names = self.request.data.get('slug', [])
+        existing_genres = Genre.objects.filter(slug__in=genre_names)
         if existing_genres.count() == len(genre_names):
-            serializer.save()
+            instance = serializer.save()
+            response_serializer = self.response_serializer_class(instance)
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
         else:
             raise ValidationError("Указаны несуществующие жанры")
 
@@ -75,6 +83,11 @@ class TitlesViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return ReadTitleSerializer
         return TitlesSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return super().get_permissions()
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -146,7 +159,8 @@ class UserRegister(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            user = User.objects.get(username=serializer.validated_data['username'])
+            user = User.objects.get(
+                username=serializer.validated_data['username'])
             confirmation_code = random.randint(111111, 999999)
             user.confirmation_code = confirmation_code
             user.save(update_fields=['confirmation_code'])
@@ -166,7 +180,8 @@ class GetTokenViewSet(viewsets.ViewSet):
         serializer = GetTokenSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
-            confirmation_code = int(serializer.validated_data['confirmation_code'])
+            confirmation_code = int(
+                serializer.validated_data['confirmation_code'])
             user = User.objects.get(username=username)
             if user.confirmation_code == confirmation_code:
                 refresh = RefreshToken.for_user(user)

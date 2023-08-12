@@ -6,12 +6,12 @@ User = get_user_model()
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50)
+    name = models.CharField(max_length=256, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         ordering = ('name',)
 
@@ -22,7 +22,7 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         ordering = ('name',)
 
@@ -32,7 +32,7 @@ class Titles(models.Model):
     year = models.IntegerField()
     description = models.TextField()
     genre = models.ManyToManyField(Genre, related_name='genre',
-                                   blank=True)
+                                   blank=True,)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
                                  related_name='category',
                                  null=True, blank=True)

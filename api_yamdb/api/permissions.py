@@ -45,3 +45,10 @@ class IsModerator(permissions.BasePermission):
 class IsUser(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'user'
+
+
+class AnonimReadOnly(permissions.BasePermission):
+    """Разрешает анонимному пользователю только безопасные запросы."""
+
+    def has_permission(self, request, view):
+        return request.method in permissions.SAFE_METHODS
