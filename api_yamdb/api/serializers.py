@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 from django.core.validators import RegexValidator
 
 from reviews.models import Titles, Category, Comment, Genre, Review
@@ -84,10 +85,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=True)
-    email = serializers.EmailField(required=True)
-    first_name = serializers.CharField(max_length=150)
-    last_name = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=150, required=True)
+    email = serializers.EmailField(max_length=254, required=True)
+    first_name = serializers.CharField(max_length=150, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
     role = serializers.ChoiceField(choices=CHOICES, required=False)
 
     class Meta:
@@ -97,14 +98,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=150, required=True,
-                                     validators=[RegexValidator(
-                                         r'^[\w.@+-]'), ],)
-    email = serializers.EmailField(max_length=254, required=True)
+    username = serializers.CharField(max_length=150,
+                                     required=True,
+                                     validators=[RegexValidator(r'^[\w.@+-]'),
+                                                 UniqueValidator(queryset=User.objects.all()),])
+    email = serializers.EmailField(max_length=254,
+                                   required=True,
+                                   validators=[UniqueValidator(queryset=User.objects.all()),])
 
     class Meta:
         fields = ('username', 'email')
         model = User
+        validators = [
+            UniqueTogetherValidator(
+                queryset=User.objects.all(),
+                fields=['username', 'email']
+            )
+        ]
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
