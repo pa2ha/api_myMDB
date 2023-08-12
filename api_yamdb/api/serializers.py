@@ -85,7 +85,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=150, required=True)
+    username = serializers.CharField(max_length=150,
+                                     required=True,
+                                     validators=[RegexValidator(r'^[\\w.@+-]+\\z'),
+                                                 UniqueValidator(queryset=User.objects.all()),])
     email = serializers.EmailField(max_length=254, required=True)
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
@@ -100,7 +103,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
-                                     validators=[RegexValidator(r'^[\w.@+-]'),
+                                     validators=[RegexValidator(r'^[\\w.@+-]+\\z'),
                                                  UniqueValidator(queryset=User.objects.all()),])
     email = serializers.EmailField(max_length=254,
                                    required=True,
