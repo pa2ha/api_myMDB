@@ -166,7 +166,7 @@ class GetTokenViewSet(viewsets.ViewSet):
         serializer = GetTokenSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
-            confirmation_code = serializer.validated_data['confirmation_code']
+            confirmation_code = int(serializer.validated_data['confirmation_code'])
             user = User.objects.get(username=username)
             if user.confirmation_code == confirmation_code:
                 refresh = RefreshToken.for_user(user)
