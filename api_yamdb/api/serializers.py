@@ -3,6 +3,7 @@ from django.core.validators import RegexValidator
 
 from reviews.models import Titles, Category, Comment, Genre, Review
 from users.models import User, CHOICES
+from django.db.models import Avg
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -34,18 +35,24 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitlesSerializer(serializers.ModelSerializer):
 
     genre = serializers.SlugRelatedField(
-        slug_field='name',
+        slug_field='slug',
         queryset=Genre.objects.all(),
         many=True
     )
-
+    rating = serializers.SerializerMethodField()
     category = serializers.SlugRelatedField(
-        slug_field='name',
+        slug_field='slug',
         queryset=Category.objects.all(),)
 
     class Meta:
         model = Titles
-        fields = ('name', 'year', 'genre', 'category', 'description')
+        fields = ('id', 'name', 'year', 'rating',
+                  'description', 'genre', 'category')
+
+    def get_rating(self, obj):
+        average_score = Review.objects.filter(title=obj).aggregate(
+            Avg('score'))['score__avg']
+        return average_score
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):

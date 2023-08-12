@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'rest_framework',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
