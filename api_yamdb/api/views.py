@@ -138,7 +138,7 @@ class UserViewSet(viewsets.ModelViewSet):
             detail=False,
             url_path='me',
             serializer_class=UserSerializer,
-            permission_classes=(permissions.IsAuthenticated,))
+            permission_classes=(IsUserIsModeratorIsAdmin,))
     def user_profile(self, request):
         user = request.user
         if request.method == "GET":
@@ -155,17 +155,23 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserRegister(APIView):
-    permission_classes = (IsUserIsModeratorIsAdmin,)
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
-        if User.objects.filter(username=serializer.initial_data['username'], email=serializer.initial_data['email']).exists():
-            user = User.objects.get(username=serializer.initial_data['username'])
+        try:
+            username = serializer.initial_data['username']
+            email = serializer.initial_data['email']
+        except KeyError as e:
+            return Response({'error': f'Missing key: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(username=username, email=email).exists():
+            user = User.objects.get(username=username)
             send_mail(
                 subject="YaMDb - confirmation code",
                 message=f"Your confirmation code: {user.confirmation_code}",
                 from_email=None,
-                recipient_list=[user.email],)
+                recipient_list=[user.email],
+             )
             return Response(serializer.initial_data, status=status.HTTP_200_OK)
         if serializer.is_valid():
             serializer.save()
