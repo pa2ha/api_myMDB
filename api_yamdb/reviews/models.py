@@ -30,9 +30,9 @@ class Category(models.Model):
 class Titles(models.Model):
     name = models.CharField(max_length=256)
     year = models.IntegerField()
-    description = models.TextField()
+    description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, related_name='genre',
-                                   blank=True,)
+                                   blank=True, through='GenreTitle',)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
                                  related_name='category',
                                  null=True, blank=True)
@@ -91,6 +91,25 @@ class Review(models.Model):
 
     def __str__(self):
         return self.text[:15]
+
+
+class GenreTitle(models.Model):
+    """Вспомогательный класс, связывающий жанры и произведения."""
+
+    genre = models.ForeignKey(
+        Genre,
+        on_delete=models.CASCADE, related_name='genre_through'
+    )
+    title = models.ForeignKey(
+        Titles,
+        on_delete=models.CASCADE, related_name='title_through'
+    )
+
+    class Meta:
+        ordering = ('id',)
+
+    def __str__(self):
+        return f'{self.title} принадлежит жанру/ам {self.genre}'
 
 
 class Comment(models.Model):
