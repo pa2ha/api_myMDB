@@ -14,7 +14,7 @@ from .filters import TitleFilter
 
 
 from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
-                          IsSuperUserOrIsAdminOnly, AnonimReadOnly)
+                          IsSuperUserOrIsAdminOnly, AnonimReadOnly, IsUserIsModeratorIsAdmin)
 from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
                           UserSerializer, UserRegisterSerializer,
@@ -120,16 +120,18 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
-    http_method_names = ['get', 'post', 'patch', 'del']
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
     lookup_field = 'username'
 
     def create(self, request):
         serializer = UserSerializer(data=request.data)
+        if serializer.initial_data['username']=='me':
+            return Response(status=status.HTTP_400_BAD_REQUEST)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get', 'patch', ],
@@ -153,10 +155,18 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserRegister(APIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsUserIsModeratorIsAdmin,)
 
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
+        if User.objects.filter(username=serializer.initial_data['username'], email=serializer.initial_data['email']).exists():
+            user = User.objects.get(username=serializer.initial_data['username'])
+            send_mail(
+                subject="YaMDb - confirmation code",
+                message=f"Your confirmation code: {user.confirmation_code}",
+                from_email=None,
+                recipient_list=[user.email],)
+            return Response(serializer.initial_data, status=status.HTTP_200_OK)
         if serializer.is_valid():
             serializer.save()
             user = User.objects.get(
