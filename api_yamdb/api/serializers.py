@@ -5,6 +5,7 @@ from django.core.validators import RegexValidator
 from reviews.models import Titles, Category, Comment, Genre, Review
 from users.models import User, CHOICES
 from django.db.models import Avg
+from .validators import validate_username
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -94,8 +95,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
-                                     validators=[RegexValidator(r'^[\\w.@+-]+\\z'),
-                                                 UniqueValidator(queryset=User.objects.all()),])
+                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$'),
+                                                 UniqueValidator(queryset=User.objects.all()),
+                                                 validate_username],
+)
     email = serializers.EmailField(max_length=254, required=True)
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
@@ -110,14 +113,15 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
-                                     validators=[RegexValidator(r'^[\\w.@+-]+\\z'),
-                                                 UniqueValidator(queryset=User.objects.all()),])
+                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$'),
+                                                 UniqueValidator(queryset=User.objects.all()),
+                                                 validate_username])
     email = serializers.EmailField(max_length=254,
                                    required=True,
                                    validators=[UniqueValidator(queryset=User.objects.all()),])
 
     class Meta:
-        fields = ('username', 'email')
+        fields = ('email', 'username')
         model = User
         validators = [
             UniqueTogetherValidator(
