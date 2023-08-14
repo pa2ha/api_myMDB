@@ -162,8 +162,9 @@ class UserRegister(APIView):
         try:
             username = serializer.initial_data['username']
             email = serializer.initial_data['email']
-        except KeyError as e:
-            return Response({'error': f'Missing key: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError:
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(username=username, email=email).exists():
             user = User.objects.get(username=username)
             send_mail(
