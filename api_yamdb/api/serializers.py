@@ -131,6 +131,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserMeEditSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=150,
+                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$')])
+    email = serializers.EmailField(max_length=254)
+
+    class Meta:
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio')
+        model = User
+
+
 class GetTokenSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     confirmation_code = serializers.CharField(required=True)

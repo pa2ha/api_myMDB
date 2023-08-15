@@ -1,4 +1,5 @@
 import random
+from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, viewsets, mixins, status
@@ -19,7 +20,7 @@ from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           GenreSerializer, CategorySerializer,
                           UserSerializer, UserRegisterSerializer,
                           ReviewSerializer, CommentSerializer,
-                          GetTokenSerializer)
+                          GetTokenSerializer, UserMeEditSerializer)
 from reviews.models import Titles, Genre, Category, Review
 from users.models import User
 
@@ -127,9 +128,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         serializer = UserSerializer(data=request.data)
-        if serializer.initial_data['username']=='me':
-            return Response(status=status.HTTP_400_BAD_REQUEST)
         if serializer.is_valid():
+            if serializer.initial_data['username'] == 'me' or User.objects.filter(email=serializer.validated_data['email']).exists():
+                return Response({'message': 'Invalid username'}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -138,48 +139,54 @@ class UserViewSet(viewsets.ModelViewSet):
             detail=False,
             url_path='me',
             serializer_class=UserSerializer,
-            permission_classes=(permissions.IsAuthenticated,))
+            permission_classes=(IsUserIsModeratorIsAdmin,))
     def user_profile(self, request):
         user = request.user
         if request.method == "GET":
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         if request.method == "PATCH":
-            serializer = self.get_serializer(user, data=request.data)
+            serializer = UserMeEditSerializer(user, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data,
-                                status=status.HTTP_200_OK)
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                except IntegrityError:
+                    return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def send_email(data, user):
+    confirmation_code = random.randint(111111, 999999)
+    user.confirmation_code = confirmation_code
+    user.save(update_fields=['confirmation_code'])
+    send_mail(
+        subject="YaMDb - confirmation code",
+        message=f"Your confirmation code: {confirmation_code}",
+        from_email=None,
+        recipient_list=[user.email],)
+    return Response(data, status=status.HTTP_200_OK)
 
 
 class UserRegister(APIView):
-    permission_classes = (IsUserIsModeratorIsAdmin,)
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
-        if User.objects.filter(username=serializer.initial_data['username'], email=serializer.initial_data['email']).exists():
-            user = User.objects.get(username=serializer.initial_data['username'])
-            send_mail(
-                subject="YaMDb - confirmation code",
-                message=f"Your confirmation code: {user.confirmation_code}",
-                from_email=None,
-                recipient_list=[user.email],)
-            return Response(serializer.initial_data, status=status.HTTP_200_OK)
+        try:
+            username = serializer.initial_data['username']
+            email = serializer.initial_data['email']
+        except KeyError:
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(username=username, email=email).exists():
+            user = User.objects.get(username=username)
+            return send_email(serializer.initial_data, user)
         if serializer.is_valid():
             serializer.save()
             user = User.objects.get(
                 username=serializer.validated_data['username'])
-            confirmation_code = random.randint(111111, 999999)
-            user.confirmation_code = confirmation_code
-            user.save(update_fields=['confirmation_code'])
-            send_mail(
-                subject="YaMDb - confirmation code",
-                message=f"Your confirmation code: {confirmation_code}",
-                from_email=None,
-                recipient_list=[user.email],)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return send_email(serializer.data, user)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -192,16 +199,19 @@ class GetTokenViewSet(viewsets.ViewSet):
             username = serializer.validated_data['username']
             confirmation_code = int(
                 serializer.validated_data['confirmation_code'])
-            user = User.objects.get(username=username)
-            if user.confirmation_code == confirmation_code:
-                refresh = RefreshToken.for_user(user)
-                token = {
-                    'token': str(refresh.access_token),
-                }
-                return Response(token, status=status.HTTP_200_OK)
-            else:
-                return Response({'message': 'Invalid confirmation code'},
+            try:
+                user = User.objects.get(username=username)
+                if user.confirmation_code == confirmation_code:
+                    refresh = RefreshToken.for_user(user)
+                    token = {
+                        'token': str(refresh.access_token),
+                    }
+                    return Response(token, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'Invalid confirmation code'},
                                 status=status.HTTP_400_BAD_REQUEST)
+            except User.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND) 
         else:
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
