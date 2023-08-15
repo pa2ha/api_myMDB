@@ -97,6 +97,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (
         IsSuperUserIsAdminIsModeratorIsAuthor,
+        permissions.IsAuthenticatedOrReadOnly
     )
 
     def get_title(self):
