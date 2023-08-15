@@ -27,7 +27,7 @@ class Category(models.Model):
         ordering = ('name',)
 
 
-class Titles(models.Model):
+class Title(models.Model):
     name = models.CharField(max_length=256)
     year = models.IntegerField()
     description = models.TextField(blank=True)
@@ -71,7 +71,7 @@ class Review(models.Model):
         verbose_name='Дата публикации',
     )
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='произведение',
@@ -101,7 +101,7 @@ class GenreTitle(models.Model):
         on_delete=models.CASCADE, related_name='genre_through'
     )
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE, related_name='title_through'
     )
 

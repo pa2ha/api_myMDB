@@ -21,7 +21,7 @@ from .serializers import (TitlesSerializer, ReadTitleSerializer,
                           UserSerializer, UserRegisterSerializer,
                           ReviewSerializer, CommentSerializer,
                           GetTokenSerializer, UserMeEditSerializer)
-from reviews.models import Titles, Genre, Category, Review
+from reviews.models import Title, Genre, Category, Review
 from users.models import User
 
 
@@ -60,7 +60,7 @@ class CategoryViewSet(mixins.CreateModelMixin,
 
 
 class TitlesViewSet(viewsets.ModelViewSet):
-    queryset = Titles.objects.all()
+    queryset = Title.objects.all()
     serializer_class = TitlesSerializer
     permission_classes = (AnonimReadOnly | IsSuperUserOrIsAdminOnly,)
     response_serializer_class = ReadTitleSerializer
@@ -102,7 +102,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_title(self):
         """Возвращает объект текущего произведения."""
         title_id = self.kwargs.get('title_id')
-        return get_object_or_404(Titles, pk=title_id)
+        return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
         """Возвращает queryset c отзывами для текущего произведения."""
@@ -209,9 +209,9 @@ class GetTokenViewSet(viewsets.ViewSet):
                     return Response(token, status=status.HTTP_200_OK)
                 else:
                     return Response({'message': 'Invalid confirmation code'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                                    status=status.HTTP_400_BAD_REQUEST)
             except User.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND) 
+                return Response(status=status.HTTP_404_NOT_FOUND)
         else:
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)

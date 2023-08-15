@@ -1,7 +1,7 @@
 import csv
 
 from django.core.management.base import BaseCommand
-from reviews.models import Titles, Genre, Category, Review, GenreTitle, Comment
+from reviews.models import Title, Genre, Category, Review, GenreTitle, Comment
 from users.models import User
 
 
@@ -23,7 +23,7 @@ Models = {"category": Category,
           "genre": Genre,
           "genre_title": GenreTitle,
           "review": Review,
-          "titles": Titles,
+          "titles": Title,
           "users": User,
           "comments": Comment}
 
@@ -53,10 +53,10 @@ class Command(BaseCommand):
                         id=row["id"],
                         name=row["name"],
                         slug=row["slug"])
-                elif model_class == Titles:
+                elif model_class == Title:
                     category_id = int(row["category"])
                     category_instance = Category.objects.get(pk=category_id)
-                    item = Titles(
+                    item = Title(
                         name=row["name"],
                         year=int(row["year"]),
                         category=category_instance
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                     genre_id = int(row["genre_id"])
                     genre_instance = Genre.objects.get(pk=genre_id)
                     title_id = int(row["title_id"])
-                    title_instance = Titles.objects.get(pk=title_id)
+                    title_instance = Title.objects.get(pk=title_id)
                     item = GenreTitle.objects.create(
                         genre=genre_instance,
                         title_id=title_instance.id)
@@ -83,7 +83,7 @@ class Command(BaseCommand):
                     author_id = int(row["author"])
                     author_instanse = User.objects.get(pk=author_id)
                     title_id = int(row["title_id"])
-                    title_instance = Titles.objects.get(pk=title_id)
+                    title_instance = Title.objects.get(pk=title_id)
                     item = Review(
                         id=int(row["id"]),
                         title=title_instance,

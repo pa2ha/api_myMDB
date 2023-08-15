@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 from django.core.validators import RegexValidator
 
-from reviews.models import Titles, Category, Comment, Genre, Review
+from reviews.models import Title, Category, Comment, Genre, Review
 from users.models import User, CHOICES
 from django.db.models import Avg
 from .validators import validate_username
@@ -47,7 +47,7 @@ class TitlesSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),)
 
     class Meta:
-        model = Titles
+        model = Title
         fields = ('id', 'name', 'year', 'rating',
                   'description', 'genre', 'category')
 
@@ -63,7 +63,7 @@ class ReadTitleSerializer(serializers.ModelSerializer):
     rating = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Titles
+        model = Title
         fields = "__all__"
 
 
@@ -80,7 +80,6 @@ class ReviewSerializer(serializers.ModelSerializer):
             'id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        """Запрещает пользователям оставлять повторные отзывы."""
         if not self.context.get('request').method == 'POST':
             return data
         author = self.context.get('request').user
@@ -97,8 +96,7 @@ class UserSerializer(serializers.ModelSerializer):
                                      required=True,
                                      validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$'),
                                                  UniqueValidator(queryset=User.objects.all()),
-                                                 validate_username],
-)
+                                                 validate_username],)
     email = serializers.EmailField(max_length=254, required=True)
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
