@@ -15,8 +15,8 @@ class IsSuperUserIsAdminIsModeratorIsAuthor(permissions.BasePermission):
             or request.user.is_authenticated
             and (request.user.is_superuser
                  or request.user.is_staff
-                 or request.user.is_admin
-                 or request.user.is_moderator
+                 or request.user.role == 'admin'
+                 or request.user.role == 'moderator'
                  or request.user == obj.author))
 
 
