@@ -1,28 +1,28 @@
 import random
-from django.db import IntegrityError
+
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, viewsets, mixins, status
-from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import AllowAny
-from django_filters.rest_framework import DjangoFilterBackend
 
-from .filters import TitleFilter
-
-
-from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
-                          IsSuperUserOrIsAdminOnly, AnonimReadOnly, IsUserIsModeratorIsAdmin)
-from .serializers import (TitlesSerializer, ReadTitleSerializer,
-                          GenreSerializer, CategorySerializer,
-                          UserSerializer, UserRegisterSerializer,
-                          ReviewSerializer, CommentSerializer,
-                          GetTokenSerializer, UserMeEditSerializer)
-from reviews.models import Title, Genre, Category, Review
+from reviews.models import Category, Genre, Review, Title
 from users.models import User
+from .filters import TitleFilter
+from .permissions import (AnonimReadOnly, IsAdmin,
+                          IsSuperUserIsAdminIsModeratorIsAuthor,
+                          IsSuperUserOrIsAdminOnly, IsUserIsModeratorIsAdmin)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, GetTokenSerializer,
+                          ReadTitleSerializer, ReviewSerializer,
+                          TitlesSerializer, UserMeEditSerializer,
+                          UserRegisterSerializer, UserSerializer)
 
 
 class GenreViewSet(mixins.CreateModelMixin,
@@ -92,8 +92,6 @@ class TitlesViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    """Вьюсет для обьектов модели Review."""
-
     serializer_class = ReviewSerializer
     permission_classes = (
         IsSuperUserIsAdminIsModeratorIsAuthor,
@@ -101,20 +99,37 @@ class ReviewViewSet(viewsets.ModelViewSet):
     )
 
     def get_title(self):
-        """Возвращает объект текущего произведения."""
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
-        """Возвращает queryset c отзывами для текущего произведения."""
         return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        """Создает отзыв для текущего произведения,
-        где автором является текущий пользователь."""
         serializer.save(
             author=self.request.user,
             title=self.get_title()
+        )
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsSuperUserIsAdminIsModeratorIsAuthor
+    )
+
+    def get_review(self):
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, pk=review_id)
+
+    def get_queryset(self):
+        return self.get_review().comments.all()
+
+    def perform_create(self, serializer):
+        serializer.save(
+            author=self.request.user,
+            review=self.get_review()
         )
 
 
@@ -130,8 +145,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            if serializer.initial_data['username'] == 'me' or User.objects.filter(email=serializer.validated_data['email']).exists():
-                return Response({'message': 'Invalid username'}, status=status.HTTP_400_BAD_REQUEST)
+            if (serializer.initial_data['username'] == 'me'
+                or User.objects.filter(
+                    email=serializer.validated_data['email']).exists()):
+                return Response({'message': 'Invalid username'},
+                                status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -147,14 +165,17 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         if request.method == "PATCH":
-            serializer = UserMeEditSerializer(user, data=request.data, partial=True)
+            serializer = UserMeEditSerializer(user,
+                                              data=request.data,
+                                              partial=True)
             if serializer.is_valid():
                 try:
                     serializer.save()
                     return Response(serializer.data, status=status.HTTP_200_OK)
                 except IntegrityError:
                     return Response(status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 def send_email(data, user):
@@ -179,7 +200,8 @@ class UserRegister(APIView):
             email = serializer.initial_data['email']
         except KeyError:
             if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors,
+                                status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(username=username, email=email).exists():
             user = User.objects.get(username=username)
             return send_email(serializer.initial_data, user)
@@ -216,30 +238,3 @@ class GetTokenViewSet(viewsets.ViewSet):
         else:
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
-
-
-class CommentViewSet(viewsets.ModelViewSet):
-    """Вьюсет для обьектов модели Comment."""
-
-    serializer_class = CommentSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsSuperUserIsAdminIsModeratorIsAuthor
-    )
-
-    def get_review(self):
-        """Возвращает объект текущего отзыва."""
-        review_id = self.kwargs.get('review_id')
-        return get_object_or_404(Review, pk=review_id)
-
-    def get_queryset(self):
-        """Возвращает queryset c комментариями для текущего отзыва."""
-        return self.get_review().comments.all()
-
-    def perform_create(self, serializer):
-        """Создает комментарий для текущего отзыва,
-        где автором является текущий пользователь."""
-        serializer.save(
-            author=self.request.user,
-            review=self.get_review()
-        )

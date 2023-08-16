@@ -1,9 +1,9 @@
 import csv
 
 from django.core.management.base import BaseCommand
-from reviews.models import Title, Genre, Category, Review, GenreTitle, Comment
-from users.models import User
 
+from reviews.models import Category, Comment, Genre, GenreTitle, Review, Title
+from users.models import User
 
 csv_files = ["category.csv", "genre.csv", "titles.csv", "genre_title.csv",
              "users.csv", "review.csv", "comments.csv"]
