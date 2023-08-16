@@ -16,7 +16,7 @@
 - Django Rest Framework 3.12.4
 - Simple JWT
 - SQLite3
-- Django-filte
+- Django-filte 23.2
 
 ## Ресурсы API YaMDb
 - Ресурс AUTH: аутентификация.
