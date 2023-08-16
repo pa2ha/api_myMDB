@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 User = get_user_model()
@@ -45,7 +45,6 @@ class Title(models.Model):
 
 
 class Review(models.Model):
-    """Класс отзывов"""
     text = models.TextField(verbose_name='текст')
     author = models.ForeignKey(
         User,
@@ -89,8 +88,6 @@ class Review(models.Model):
 
 
 class GenreTitle(models.Model):
-    """Вспомогательный класс, связывающий жанры и произведения."""
-
     genre = models.ForeignKey(
         Genre,
         on_delete=models.CASCADE, related_name='genre_through'
@@ -108,8 +105,6 @@ class GenreTitle(models.Model):
 
 
 class Comment(models.Model):
-    """Класс комментариев."""
-
     text = models.TextField(
         verbose_name='текст'
     )

@@ -3,4 +3,5 @@ from django.core.exceptions import ValidationError
 
 def validate_username(value):
     if value.lower() == "me":
-        raise ValidationError("Нельзя использовать 'me' в качестве имени пользователя")
+        raise ValidationError(
+            "Нельзя использовать 'me' в качестве имени пользователя")

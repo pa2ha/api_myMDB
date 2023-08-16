@@ -1,10 +1,10 @@
-from rest_framework import serializers
-from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 from django.core.validators import RegexValidator
-
-from reviews.models import Title, Category, Comment, Genre, Review
-from users.models import User, CHOICES
 from django.db.models import Avg
+from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
+
+from reviews.models import Category, Comment, Genre, Review, Title
+from users.models import CHOICES, User
 from .validators import validate_username
 
 
@@ -73,8 +73,6 @@ class ReadTitleSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Review."""
-
     author = serializers.StringRelatedField(
         read_only=True
     )
@@ -96,12 +94,28 @@ class ReviewSerializer(serializers.ModelSerializer):
         return data
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.StringRelatedField(
+        read_only=True
+    )
+
+    class Meta:
+        model = Comment
+        fields = (
+            'id', 'text', 'author', 'pub_date')
+
+
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
-                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$'),
-                                                 UniqueValidator(queryset=User.objects.all()),
-                                                 validate_username],)
+                                     validators=[
+                                         RegexValidator(
+                                             regex='^[a-zA-Z0-9_]*$'),
+                                         UniqueValidator(
+                                             queryset=User.objects.all()),
+                                         validate_username
+                                     ],
+                                     )
     email = serializers.EmailField(max_length=254, required=True)
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
@@ -116,12 +130,19 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
-                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$'),
-                                                 UniqueValidator(queryset=User.objects.all()),
-                                                 validate_username])
+                                     validators=[
+                                         RegexValidator(
+                                             regex='^[a-zA-Z0-9_]*$'),
+                                         UniqueValidator(
+                                             queryset=User.objects.all()),
+                                         validate_username])
     email = serializers.EmailField(max_length=254,
                                    required=True,
-                                   validators=[UniqueValidator(queryset=User.objects.all()),])
+                                   validators=[
+                                       UniqueValidator(
+                                           queryset=User.objects.all()
+                                       ),
+                                   ])
 
     class Meta:
         fields = ('email', 'username')
@@ -136,7 +157,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 class UserMeEditSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150,
-                                     validators=[RegexValidator(regex='^[a-zA-Z0-9_]*$')])
+                                     validators=[
+                                         RegexValidator(
+                                             regex='^[a-zA-Z0-9_]*$')])
     email = serializers.EmailField(max_length=254)
 
     class Meta:
@@ -152,16 +175,3 @@ class GetTokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'confirmation_code')
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    """Сериализатор объектов класса Comment."""
-
-    author = serializers.StringRelatedField(
-        read_only=True
-    )
-
-    class Meta:
-        model = Comment
-        fields = (
-            'id', 'text', 'author', 'pub_date')
