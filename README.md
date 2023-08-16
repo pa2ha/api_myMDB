@@ -11,12 +11,12 @@
 
 #### Технологии
 
-- Python 3.7
-- Django 2.2.16
-- Django Rest Framework 3.12.4
+- Python 
+- Django 
+- Django Rest Framework
 - Simple JWT
 - SQLite3
-- Django-filte 23.2
+- Django-filte 
 
 ## Ресурсы API YaMDb
 - Ресурс AUTH: аутентификация.
