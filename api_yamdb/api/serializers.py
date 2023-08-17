@@ -1,5 +1,4 @@
 from django.core.validators import RegexValidator
-from django.db.models import Avg
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
@@ -13,63 +12,41 @@ class GenreSerializer(serializers.ModelSerializer):
         model = Genre
         fields = ('name', 'slug')
 
-    def validate_slug(self, value):
-        if Genre.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Жанр с таким слагом уже существует"
-            )
-        return value
-
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('name', 'slug')
 
-    def validate_slug(self, value):
-        if Category.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Категория с таким слагом уже существует"
-            )
-        return value
 
-
-class TitlesSerializer(serializers.ModelSerializer):
+class TitlesCreateSerializer(serializers.ModelSerializer):
 
     genre = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Genre.objects.all(),
         many=True
     )
-    rating = serializers.SerializerMethodField()
     category = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all(),)
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'rating',
-                  'description', 'genre', 'category')
+        fields = '__all__'
 
-    def get_rating(self, obj):
-        average_score = Review.objects.filter(title=obj).aggregate(
-            Avg('score'))['score__avg']
-        return average_score
+    def get_queryset(self):
+        genre_slugs = self.context['request'].data.get('genre', [])
+        return Genre.objects.filter(slug__in=genre_slugs)
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = serializers.SerializerMethodField(read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Title
         fields = "__all__"
-
-    def get_rating(self, obj):
-        average_score = Review.objects.filter(title=obj).aggregate(
-            Avg('score'))['score__avg']
-        return average_score
 
 
 class ReviewSerializer(serializers.ModelSerializer):

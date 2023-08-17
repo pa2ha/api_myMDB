@@ -11,10 +11,6 @@ class TitleFilter(filters.FilterSet):
     genre = filters.CharFilter(
         field_name='genre__slug',
     )
-    year = filters.NumberFilter(
-        field_name="year",
-        lookup_expr='exact'
-    )
     name = filters.CharFilter(
         field_name='name',
     )
