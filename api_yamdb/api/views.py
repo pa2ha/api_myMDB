@@ -6,22 +6,22 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Avg
+
 
 from reviews.models import Category, Genre, Review, Title
 from users.models import User
 from .filters import TitleFilter
-from .permissions import (AnonimReadOnly, IsAdmin,
-                          IsSuperUserIsAdminIsModeratorIsAuthor,
+from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
                           IsSuperUserOrIsAdminOnly, IsUserIsModeratorIsAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetTokenSerializer,
                           ReadTitleSerializer, ReviewSerializer,
-                          TitlesSerializer, UserMeEditSerializer,
+                          TitlesCreateSerializer, UserMeEditSerializer,
                           UserRegisterSerializer, UserSerializer)
 
 
@@ -36,11 +36,6 @@ class GenreViewSet(mixins.CreateModelMixin,
     search_fields = ('name',)
     lookup_field = 'slug'
 
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return super().get_permissions()
-
 
 class CategoryViewSet(mixins.CreateModelMixin,
                       mixins.ListModelMixin,
@@ -53,37 +48,19 @@ class CategoryViewSet(mixins.CreateModelMixin,
     search_fields = ('name',)
     lookup_field = 'slug'
 
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return super().get_permissions()
-
 
 class TitlesViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitlesSerializer
-    permission_classes = (AnonimReadOnly | IsSuperUserOrIsAdminOnly,)
-    response_serializer_class = ReadTitleSerializer
+    queryset = Title.objects.all().annotate(rating=Avg(
+        'reviews__score')).order_by('name')
+    permission_classes = (IsSuperUserOrIsAdminOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
-
-    def perform_create(self, serializer):
-        genre_names = self.request.data.get('slug', [])
-        existing_genres = Genre.objects.filter(slug__in=genre_names)
-        if existing_genres.count() == len(genre_names):
-            instance = serializer.save()
-            response_serializer = self.response_serializer_class(instance)
-            return Response(
-                response_serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            raise ValidationError("Указаны несуществующие жанры")
+    filterset_fields = ('year')
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return ReadTitleSerializer
-        return TitlesSerializer
+        return TitlesCreateSerializer
 
     def get_permissions(self):
         if self.request.method == 'GET':

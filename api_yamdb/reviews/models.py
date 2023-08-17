@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -6,42 +8,75 @@ User = get_user_model()
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=256, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=256,
+                            unique=True,
+                            verbose_name='Название')
+    slug = models.SlugField(max_length=50,
+                            unique=True,
+                            verbose_name='slug')
+
+    class Meta:
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
-
-    class Meta:
-        ordering = ('name',)
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50)
+    name = models.CharField(max_length=256,
+                            unique=True,
+                            verbose_name='Название')
+    slug = models.SlugField(max_length=50,
+                            unique=True,
+                            verbose_name='slug')
+
+    class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
-
-    class Meta:
-        ordering = ('name',)
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=256)
-    year = models.IntegerField()
-    description = models.TextField(blank=True)
-    genre = models.ManyToManyField(Genre, related_name='genre',
-                                   blank=True, through='GenreTitle',)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL,
+    name = models.CharField(max_length=256, verbose_name='Название')
+    year = models.PositiveIntegerField(
+        verbose_name='год выпуска',
+        validators=[
+            MinValueValidator(
+                0,
+                message='Значение года не может быть отрицательным'
+            ),
+            MaxValueValidator(
+                int(datetime.now().year),
+                message='Значение года не может быть больше текущего'
+            )
+        ],
+        db_index=True
+    )
+    description = models.TextField(blank=True, verbose_name='описание',)
+    genre = models.ManyToManyField(Genre,
+                                   related_name='genre',
+                                   verbose_name='жанр',
+                                   blank=True,
+                                   through='GenreTitle',)
+    category = models.ForeignKey(Category,
+                                 on_delete=models.SET_NULL,
                                  related_name='category',
-                                 null=True, blank=True)
+                                 verbose_name='категория',
+                                 null=True,
+                                 blank=True)
+
+    class Meta:
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
-
-    class Meta:
-        ordering = ('name',)
 
 
 class Review(models.Model):
@@ -90,14 +125,20 @@ class Review(models.Model):
 class GenreTitle(models.Model):
     genre = models.ForeignKey(
         Genre,
-        on_delete=models.CASCADE, related_name='genre_through'
+        on_delete=models.CASCADE,
+        related_name='genre_through',
+        verbose_name='Жанр'
     )
     title = models.ForeignKey(
         Title,
-        on_delete=models.CASCADE, related_name='title_through'
+        on_delete=models.CASCADE,
+        related_name='title_through',
+        verbose_name='произведение'
     )
 
     class Meta:
+        verbose_name = 'Соответствие жанра и произведения'
+        verbose_name_plural = 'Таблица соответствия жанров и произведений'
         ordering = ('id',)
 
     def __str__(self):
