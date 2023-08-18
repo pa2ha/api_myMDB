@@ -89,11 +89,16 @@ class Review(models.Model):
     )
     score = models.PositiveIntegerField(
         verbose_name='Оценка',
-        validators=(
-            MinValueValidator(1),
-            MaxValueValidator(10)
-        ),
-        error_messages={'validators': 'Оценка от 1 до 10!'}
+        validators=[
+            MinValueValidator(
+                1,
+                message='Введенная оценка ниже допустимой'
+            ),
+            MaxValueValidator(
+                10,
+                message='Введенная оценка выше допустимой'
+            ),
+        ]
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
