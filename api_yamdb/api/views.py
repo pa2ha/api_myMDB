@@ -1,27 +1,26 @@
-import random
-
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Avg
+
 
 from reviews.models import Category, Genre, Review, Title
 from users.models import User
 from .filters import TitleFilter
-from .permissions import (AnonimReadOnly, IsAdmin,
-                          IsSuperUserIsAdminIsModeratorIsAuthor,
+from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
                           IsSuperUserOrIsAdminOnly, IsUserIsModeratorIsAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetTokenSerializer,
                           ReadTitleSerializer, ReviewSerializer,
-                          TitlesSerializer, UserMeEditSerializer,
+                          TitlesCreateSerializer, UserMeEditSerializer,
                           UserRegisterSerializer, UserSerializer)
 
 
@@ -36,11 +35,6 @@ class GenreViewSet(mixins.CreateModelMixin,
     search_fields = ('name',)
     lookup_field = 'slug'
 
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return super().get_permissions()
-
 
 class CategoryViewSet(mixins.CreateModelMixin,
                       mixins.ListModelMixin,
@@ -53,37 +47,19 @@ class CategoryViewSet(mixins.CreateModelMixin,
     search_fields = ('name',)
     lookup_field = 'slug'
 
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return super().get_permissions()
-
 
 class TitlesViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitlesSerializer
-    permission_classes = (AnonimReadOnly | IsSuperUserOrIsAdminOnly,)
-    response_serializer_class = ReadTitleSerializer
+    queryset = Title.objects.all().annotate(rating=Avg(
+        'reviews__score')).order_by('name')
+    permission_classes = (IsSuperUserOrIsAdminOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
-
-    def perform_create(self, serializer):
-        genre_names = self.request.data.get('slug', [])
-        existing_genres = Genre.objects.filter(slug__in=genre_names)
-        if existing_genres.count() == len(genre_names):
-            instance = serializer.save()
-            response_serializer = self.response_serializer_class(instance)
-            return Response(
-                response_serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            raise ValidationError("Указаны несуществующие жанры")
+    filterset_fields = ('year')
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return ReadTitleSerializer
-        return TitlesSerializer
+        return TitlesCreateSerializer
 
     def get_permissions(self):
         if self.request.method == 'GET':
@@ -144,22 +120,19 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            if (serializer.initial_data['username'] == 'me'
-                or User.objects.filter(
-                    email=serializer.validated_data['email']).exists()):
-                return Response({'message': 'Invalid username'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        if User.objects.filter(
+                email=serializer.validated_data['email']).exists():
+            return Response({'message': 'Invalid email'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get', 'patch', ],
             detail=False,
-            url_path='me',
             serializer_class=UserSerializer,
             permission_classes=(IsUserIsModeratorIsAdmin,))
-    def user_profile(self, request):
+    def me(self, request):
         user = request.user
         if request.method == "GET":
             serializer = self.get_serializer(user)
@@ -168,26 +141,23 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = UserMeEditSerializer(user,
                                               data=request.data,
                                               partial=True)
-            if serializer.is_valid():
-                try:
-                    serializer.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-                except IntegrityError:
-                    return Response(status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except IntegrityError:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 def send_email(data, user):
-    confirmation_code = random.randint(111111, 999999)
+    confirmation_code = default_token_generator.make_token(user)
     user.confirmation_code = confirmation_code
     user.save(update_fields=['confirmation_code'])
-    send_mail(
+    return send_mail(
         subject="YaMDb - confirmation code",
         message=f"Your confirmation code: {confirmation_code}",
         from_email=None,
         recipient_list=[user.email],)
-    return Response(data, status=status.HTTP_200_OK)
 
 
 class UserRegister(APIView):
@@ -195,22 +165,12 @@ class UserRegister(APIView):
 
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
-        try:
-            username = serializer.initial_data['username']
-            email = serializer.initial_data['email']
-        except KeyError:
-            if not serializer.is_valid():
-                return Response(serializer.errors,
-                                status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(username=username, email=email).exists():
-            user = User.objects.get(username=username)
-            return send_email(serializer.initial_data, user)
-        if serializer.is_valid():
-            serializer.save()
-            user = User.objects.get(
-                username=serializer.validated_data['username'])
-            return send_email(serializer.data, user)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        user = User.objects.get_or_create(
+            username=serializer.validated_data['username'],
+            email=serializer.validated_data['email'])[0]
+        send_email(serializer.data, user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GetTokenViewSet(viewsets.ViewSet):
@@ -218,23 +178,17 @@ class GetTokenViewSet(viewsets.ViewSet):
 
     def create(self, request):
         serializer = GetTokenSerializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
-            confirmation_code = int(
-                serializer.validated_data['confirmation_code'])
-            try:
-                user = User.objects.get(username=username)
-                if user.confirmation_code == confirmation_code:
-                    refresh = RefreshToken.for_user(user)
-                    token = {
-                        'token': str(refresh.access_token),
-                    }
-                    return Response(token, status=status.HTTP_200_OK)
-                else:
-                    return Response({'message': 'Invalid confirmation code'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-            except User.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        confirmation_code = int(
+            serializer.validated_data['confirmation_code'])
+        user = get_object_or_404(User, username=username)
+        if user.confirmation_code == confirmation_code:
+            refresh = RefreshToken.for_user(user)
+            token = {
+                'token': str(refresh.access_token),
+            }
+            return Response(token, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors,
+            return Response({'message': 'Invalid confirmation code'},
                             status=status.HTTP_400_BAD_REQUEST)

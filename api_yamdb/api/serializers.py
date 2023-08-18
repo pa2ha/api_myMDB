@@ -1,10 +1,9 @@
 from django.core.validators import RegexValidator
-from django.db.models import Avg
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
+from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import CHOICES, User
+from users.models import ROLE_CHOICES, User
 from .validators import validate_username
 
 
@@ -13,63 +12,41 @@ class GenreSerializer(serializers.ModelSerializer):
         model = Genre
         fields = ('name', 'slug')
 
-    def validate_slug(self, value):
-        if Genre.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Жанр с таким слагом уже существует"
-            )
-        return value
-
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('name', 'slug')
 
-    def validate_slug(self, value):
-        if Category.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Категория с таким слагом уже существует"
-            )
-        return value
 
-
-class TitlesSerializer(serializers.ModelSerializer):
+class TitlesCreateSerializer(serializers.ModelSerializer):
 
     genre = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Genre.objects.all(),
         many=True
     )
-    rating = serializers.SerializerMethodField()
     category = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all(),)
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'rating',
-                  'description', 'genre', 'category')
+        fields = '__all__'
 
-    def get_rating(self, obj):
-        average_score = Review.objects.filter(title=obj).aggregate(
-            Avg('score'))['score__avg']
-        return average_score
+    def get_queryset(self):
+        genre_slugs = self.context['request'].data.get('genre', [])
+        return Genre.objects.filter(slug__in=genre_slugs)
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = serializers.SerializerMethodField(read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Title
         fields = "__all__"
-
-    def get_rating(self, obj):
-        average_score = Review.objects.filter(title=obj).aggregate(
-            Avg('score'))['score__avg']
-        return average_score
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -119,7 +96,7 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=254, required=True)
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
-    role = serializers.ChoiceField(choices=CHOICES, required=False)
+    role = serializers.ChoiceField(choices=ROLE_CHOICES, required=False)
 
     class Meta:
         fields = ('username', 'email', 'first_name',
@@ -127,32 +104,32 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
 
 
-class UserRegisterSerializer(serializers.ModelSerializer):
+class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150,
                                      required=True,
                                      validators=[
                                          RegexValidator(
                                              regex='^[a-zA-Z0-9_]*$'),
-                                         UniqueValidator(
-                                             queryset=User.objects.all()),
                                          validate_username])
     email = serializers.EmailField(max_length=254,
-                                   required=True,
-                                   validators=[
-                                       UniqueValidator(
-                                           queryset=User.objects.all()
-                                       ),
-                                   ])
+                                   required=True)
 
     class Meta:
         fields = ('email', 'username')
         model = User
-        validators = [
-            UniqueTogetherValidator(
-                queryset=User.objects.all(),
-                fields=['username', 'email']
-            )
-        ]
+
+    def validate(self, data):
+        if not User.objects.filter(username=data.get('username'),
+                                   email=data.get('email')):
+            if User.objects.filter(email=data.get('email')):
+                raise serializers.ValidationError(
+                    'Пользователь с таким email уже существует'
+                )
+            if User.objects.filter(username=data.get('username')):
+                raise serializers.ValidationError(
+                    'Пользователь с таким именем уже существует'
+                )
+        return data
 
 
 class UserMeEditSerializer(serializers.ModelSerializer):
