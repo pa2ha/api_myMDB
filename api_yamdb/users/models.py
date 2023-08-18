@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-CHOICES = (
+ROLE_CHOICES = (
     ('user', 'user'),
     ('moderator', 'moderator'),
     ('admin', 'admin'),
@@ -9,32 +9,10 @@ CHOICES = (
 
 
 class User(AbstractUser):
-    username = models.CharField(
-        verbose_name='Имя пользователя',
-        max_length=150,
-        unique=True
-    )
-    password = models.CharField(
-        verbose_name='Пароль',
-        max_length=128,
-        blank=True,
-    )
     email = models.EmailField(
         verbose_name='Электронная почта',
         max_length=254,
         unique=True
-    )
-    first_name = models.CharField(
-        verbose_name='Имя',
-        max_length=150,
-        null=True,
-        blank=True
-    )
-    last_name = models.CharField(
-        verbose_name='Фамилия',
-        max_length=150,
-        null=True,
-        blank=True
     )
     bio = models.TextField(
         verbose_name='Биография',
@@ -44,11 +22,12 @@ class User(AbstractUser):
     role = models.CharField(
         verbose_name='Роль',
         max_length=20,
-        choices=CHOICES,
+        choices=ROLE_CHOICES,
         blank=True,
         default='user'
     )
-    confirmation_code = models.IntegerField(
+    confirmation_code = models.CharField(
+        max_length=254,
         null=True,
         blank=True
     )
