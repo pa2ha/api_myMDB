@@ -34,10 +34,6 @@ class TitlesCreateSerializer(serializers.ModelSerializer):
         model = Title
         fields = '__all__'
 
-    def get_queryset(self):
-        genre_slugs = self.context['request'].data.get('genre', [])
-        return Genre.objects.filter(slug__in=genre_slugs)
-
 
 class ReadTitleSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
