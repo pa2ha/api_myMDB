@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import ROLE_CHOICES, User
+from users.models import User
 from .validators import validate_username
 
 
@@ -33,10 +33,6 @@ class TitlesCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = '__all__'
-
-    def get_queryset(self):
-        genre_slugs = self.context['request'].data.get('genre', [])
-        return Genre.objects.filter(slug__in=genre_slugs)
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
@@ -94,9 +90,6 @@ class UserSerializer(serializers.ModelSerializer):
                                      ],
                                      )
     email = serializers.EmailField(max_length=254, required=True)
-    first_name = serializers.CharField(max_length=150, required=False)
-    last_name = serializers.CharField(max_length=150, required=False)
-    role = serializers.ChoiceField(choices=ROLE_CHOICES, required=False)
 
     class Meta:
         fields = ('username', 'email', 'first_name',
