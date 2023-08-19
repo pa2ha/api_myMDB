@@ -1,6 +1,5 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
@@ -123,7 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         if User.objects.filter(
                 email=serializer.validated_data['email']).exists():
-            return Response({'message': 'Invalid email'},
+            return Response({'message': 'Такой email уже существует'},
                             status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -134,19 +133,16 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes=(IsUserIsModeratorIsAdmin,))
     def me(self, request):
         user = request.user
-        if request.method == "GET":
+        if request.method == 'GET':
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        if request.method == "PATCH":
+        if request.method == 'PATCH':
             serializer = UserMeEditSerializer(user,
                                               data=request.data,
                                               partial=True)
             serializer.is_valid(raise_exception=True)
-            try:
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            except IntegrityError:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 def send_email(data, user):
@@ -166,9 +162,9 @@ class UserRegister(APIView):
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = User.objects.get_or_create(
+        user, _ = User.objects.get_or_create(
             username=serializer.validated_data['username'],
-            email=serializer.validated_data['email'])[0]
+            email=serializer.validated_data['email'])
         send_email(serializer.data, user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
