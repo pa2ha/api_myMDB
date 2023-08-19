@@ -14,8 +14,10 @@ from django.db.models import Avg
 from reviews.models import Category, Genre, Review, Title
 from users.models import User
 from .filters import TitleFilter
-from .permissions import (IsAdmin, IsSuperUserIsAdminIsModeratorIsAuthor,
-                          IsSuperUserOrIsAdminOnly, IsUserIsModeratorIsAdmin)
+from .permissions import (IsAdmin,
+                          IsSuperUserIsAdminIsModeratorIsAuthor,
+                          IsSuperUserOrIsAdminOrReadOnly,
+                          IsUserIsModeratorIsAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetTokenSerializer,
                           ReadTitleSerializer, ReviewSerializer,
@@ -30,7 +32,7 @@ class GenreViewSet(mixins.CreateModelMixin,
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     filter_backends = (filters.SearchFilter,)
-    permission_classes = (IsSuperUserOrIsAdminOnly,)
+    permission_classes = (IsSuperUserOrIsAdminOrReadOnly,)
     search_fields = ('name',)
     lookup_field = 'slug'
 
@@ -42,7 +44,7 @@ class CategoryViewSet(mixins.CreateModelMixin,
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     filter_backends = (filters.SearchFilter,)
-    permission_classes = (IsSuperUserOrIsAdminOnly,)
+    permission_classes = (IsSuperUserOrIsAdminOrReadOnly,)
     search_fields = ('name',)
     lookup_field = 'slug'
 
@@ -50,7 +52,7 @@ class CategoryViewSet(mixins.CreateModelMixin,
 class TitlesViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all().annotate(rating=Avg(
         'reviews__score')).order_by('name')
-    permission_classes = (IsSuperUserOrIsAdminOnly,)
+    permission_classes = (IsSuperUserOrIsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     filterset_fields = ('year')
@@ -59,11 +61,6 @@ class TitlesViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return ReadTitleSerializer
         return TitlesCreateSerializer
-
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return super().get_permissions()
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

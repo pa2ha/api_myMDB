@@ -19,7 +19,7 @@ class IsAdmin(permissions.BasePermission):
             request.user.is_admin or request.user.is_superuser)
 
 
-class IsSuperUserOrIsAdminOnly(permissions.BasePermission):
+class IsSuperUserOrIsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method == 'GET':
             return True
