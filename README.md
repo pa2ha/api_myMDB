@@ -96,3 +96,15 @@ python3 manage.py runserver
 
 #### Полный список запросов API находятся в документация
 Документация к API доступна по адресу [http://127.0.0.1:8000/redoc/](http://127.0.0.1:8000/redoc/) после запуска сервера с проектом
+
+
+Авторы:
+
+
+[Дроздов Даниил](https://github.com/pa2ha)
+
+
+ [Татьяна Нефёдова](https://github.com/TatianaNefedova)
+
+
+ [Shredincat](https://github.com/Shredincat)
